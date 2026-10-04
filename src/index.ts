@@ -37,7 +37,7 @@ export default {
 		}
 
 		try {
-			const body = await request.json();
+			const body: any = await request.json();
 
 			// 2. Call the AI model (replace model ID if you prefer another)
 			const aiResponse = await env.AI.run("@cf/meta/llama-3-8b-instruct", {
@@ -48,8 +48,15 @@ export default {
 			// 3. Return a clean, single JSON payload (no streaming)
 			return Response.json(aiResponse);
 
-		} catch (error) {
-			return Response.json({ error: "Failed to process request" }, { status: 500 });
+		} catch (error: any) {
+			return Response.json(
+				{ 
+					error: "Failed to process request", 
+          			details: error.message,
+          			stack: error.stack
+				 }, 
+				{ status: 500 }
+			);
 		}
 		}
 
