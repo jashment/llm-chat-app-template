@@ -28,35 +28,45 @@ export default {
 	): Promise<Response> {
 		const url = new URL(request.url);
 
-		if (url.pathname === "/api/generate" && request.method === "POST") {
-      
-		// 1. Require an API Key
+		// Change the route name to match the OpenAI standard
+		if (url.pathname === "/v1/chat/completions" && request.method === "POST") {
+		
 		const authHeader = request.headers.get("Authorization");
 		if (authHeader !== `Bearer ${env.API_SECRET}`) {
-			return new Response("Unauthorized. Invalid or missing API key.", { status: 401 });
+			return new Response("Unauthorized.", { status: 401 });
 		}
 
 		try {
 			const body: any = await request.json();
 
-			// 2. Call the AI model (replace model ID if you prefer another)
-			const aiResponse = await env.AI.run("@cf/qwen/qwen3-30b-a3b-fp8", {
-			// Accept either a direct prompt string or an array of messages
-			messages: body.messages || [{ role: "user", content: body.prompt }]
-			});
+			// 1. Pass the entire body (messages, tools, etc.) directly to Qwen
+			const aiResponse: any = await env.AI.run("@cf/qwen/qwen3-30b-a3b-fp8", body);
 
-			// 3. Return a clean, single JSON payload (no streaming)
-			return Response.json(aiResponse);
+			// 2. Wrap Cloudflare's response in the strict OpenAI format 
+			// that Claude Code and Hermes Agent require to function
+			const openAiFormattedResponse = {
+			id: "chatcmpl-" + crypto.randomUUID(),
+			object: "chat.completion",
+			created: Math.floor(Date.now() / 1000),
+			model: "qwen3-30b",
+			choices: [
+				{
+				index: 0,
+				message: {
+					role: "assistant",
+					content: aiResponse.response || null,
+					tool_calls: aiResponse.tool_calls || undefined
+				},
+				finish_reason: aiResponse.tool_calls ? "tool_calls" : "stop"
+				}
+			],
+			usage: { prompt_tokens: 0, completion_tokens: 0, total_tokens: 0 }
+			};
+
+			return Response.json(openAiFormattedResponse);
 
 		} catch (error: any) {
-			return Response.json(
-				{ 
-					error: "Failed to process request", 
-          			details: error.message,
-          			stack: error.stack
-				 }, 
-				{ status: 500 }
-			);
+			return Response.json({ error: error.message }, { status: 500 });
 		}
 		}
 
