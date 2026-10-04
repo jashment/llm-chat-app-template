@@ -40,7 +40,7 @@ export default {
 			const body: any = await request.json();
 
 			// 2. Call the AI model (replace model ID if you prefer another)
-			const aiResponse = await env.AI.run("@cf/meta/llama-3-8b-instruct", {
+			const aiResponse = await env.AI.run("@cf/qwen/qwen3-30b-a3b-fp8", {
 			// Accept either a direct prompt string or an array of messages
 			messages: body.messages || [{ role: "user", content: body.prompt }]
 			});
