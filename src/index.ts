@@ -28,6 +28,31 @@ export default {
 	): Promise<Response> {
 		const url = new URL(request.url);
 
+		if (url.pathname === "/api/generate" && request.method === "POST") {
+      
+		// 1. Require an API Key
+		const authHeader = request.headers.get("Authorization");
+		if (authHeader !== `Bearer ${env.API_SECRET}`) {
+			return new Response("Unauthorized. Invalid or missing API key.", { status: 401 });
+		}
+
+		try {
+			const body = await request.json();
+
+			// 2. Call the AI model (replace model ID if you prefer another)
+			const aiResponse = await env.AI.run("@cf/meta/llama-3-8b-instruct", {
+			// Accept either a direct prompt string or an array of messages
+			messages: body.messages || [{ role: "user", content: body.prompt }]
+			});
+
+			// 3. Return a clean, single JSON payload (no streaming)
+			return Response.json(aiResponse);
+
+		} catch (error) {
+			return Response.json({ error: "Failed to process request" }, { status: 500 });
+		}
+		}
+
 		// Handle static assets (frontend)
 		if (url.pathname === "/" || !url.pathname.startsWith("/api/")) {
 			return env.ASSETS.fetch(request);

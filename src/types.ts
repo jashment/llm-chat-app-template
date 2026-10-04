@@ -3,6 +3,7 @@
  */
 
 export interface Env {
+	API_SECRET: any;
 	/**
 	 * Binding for the Workers AI API.
 	 */
